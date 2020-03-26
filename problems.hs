@@ -76,7 +76,7 @@ split [] _ = error "can't split an empty list"
 split ls i = (take i ls, drop i ls)
 
 slice :: [a] -> Int -> Int -> [a]
-slice ls start end = take (end - start) (drop start ls)
+slice ls start end = take (end - start) (drop (start - 1) ls)
 
 rotate :: [a] -> Int -> [a]
 rotate ls n = snd ++ fst 
@@ -126,7 +126,7 @@ pollard n
                        newd = gcd (abs (newx - newy)) n
                    in cycleFind newx newy newd n
          in cycleFind 2 2 1 n
-     where sqrtn = sqrt (fromIntegral n)
+     where sqrtn = sqrt $ fromIntegral n
 
 factor :: (Integral a) => a -> (a -> a) -> [a]
 factor n factorfn
@@ -134,3 +134,10 @@ factor n factorfn
   | otherwise = 
      let fac = factorfn n
      in fac : factor (n `div` fac) factorfn
+
+primesRange :: (Integral a) => a -> a -> [a]
+primesRange start end = [x | x <- [start..end], isPrime x]
+
+goldbach :: Integer -> (Integer, Integer)
+goldbach n = let primes = primesRange 2 n
+             in head [(x, y) | x <- primes, y <- primes, x + y == n]
