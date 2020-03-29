@@ -19,7 +19,7 @@ setValid ls = not $ hasDups ls []
                   hasDups :: [Int] -> [Int] -> Bool
                   hasDups [] _ = False
                   hasDups set@(x:xs) used = if x /= 0 && x `elem` used 
-                                           then (trace ((show set) ++ (show used)) True)
+                                           then True
                                            else hasDups xs (x : used)
 
 boardCols :: [[Int]] -> [[Int]]
@@ -47,15 +47,18 @@ replaceIndex (row, col) board val = first ++ nrow : (tail last)
                                                 where (rowFst, rowLst) = splitAt col (head last)
 
 solveIndex :: (Int, Int) -> [[Int]] -> Maybe [[Int]]
-solveIndex (row, col) board = go (row, col) board [1..9]
-                              where 
-                                 go :: (Int, Int) -> [[Int]] -> [Int] -> Maybe [[Int]]
-                                 go _ _ [] = Nothing
-                                 go rc board (v:vs) = 
-                                    if (boardValid new_board)
-                                       then solveBoard new_board
-                                       else go rc (trace (showBoard board) board) vs
-                                    where new_board = replaceIndex rc board v
+solveIndex rc board = go rc board [1..9]
+                                 where 
+                                    go :: (Int, Int) -> [[Int]] -> [Int] -> Maybe [[Int]]
+                                    go _ _ [] = Nothing
+                                    go rc board (v:vs) = 
+                                       if (boardValid new_board)
+                                          then let result = recursiveBacktracking new_board (findEmpty new_board)
+                                                in case result of
+                                                     Just res_board -> result
+                                                     Nothing -> go rc board vs
+                                          else go rc board vs
+                                       where new_board = replaceIndex rc board v
 
 enumerate :: [a] -> [(Int, a)]
 enumerate ls = go ls 0
@@ -71,10 +74,10 @@ findEmpty board = concat $ map (emptyIndices) (enumerate board)
 
 recursiveBacktracking :: [[Int]] -> [(Int, Int)] -> Maybe [[Int]]
 recursiveBacktracking board [] = if boardComplete board then Just board else Nothing
-recursiveBacktracking board (i:xi) = let new_board = solveIndex i board
-                                          in case new_board of
-                                               Just nb -> new_board
-                                               Nothing -> recursiveBacktracking board xi
+recursiveBacktracking board empty@(i:xi) = let new_board = solveIndex i board
+                                             in case new_board of
+                                                  Just nb -> recursiveBacktracking nb xi
+                                                  Nothing -> Nothing
 
 solveBoard :: [[Int]] -> Maybe [[Int]]
 solveBoard board = recursiveBacktracking board (findEmpty board)
@@ -86,8 +89,11 @@ readBoard input = (readRow $ take 9 input) : (readBoard $ drop 9 input)
 
 main = do
    args <- getArgs
-   let board = readBoard (head args)
-   let solution = case solveBoard board of
-                 Just solved -> showBoard solved
-                 Nothing -> "No solution found"
-   putStr $ solution
+   if (length $ head args) /= 81 
+      then error "invalid board length"
+      else do
+         let board = readBoard (head args)
+         let solution = case solveBoard board of
+                       Just solved -> showBoard solved
+                       Nothing -> "No solution found"
+         putStr $ solution
