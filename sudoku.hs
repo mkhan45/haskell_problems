@@ -8,7 +8,7 @@ initBoard = replicate 9 (replicate 9 0)
 
 showBoard :: [[Int]] -> String
 showBoard [] = ""
-showBoard board = (show (head board)) ++ "\n" ++ (showBoard (tail board))
+showBoard (row:rem) = (show row) ++ "\n" ++ (showBoard rem)
 
 boardComplete :: [[Int]] -> Bool
 boardComplete board = all (==[1..9]) (map sort (boardSets board))
@@ -22,9 +22,6 @@ setValid ls = not $ hasDups ls []
                                            then True
                                            else hasDups xs (x : used)
 
-boardCols :: [[Int]] -> [[Int]]
-boardCols board = transpose board
-
 getSquare :: Int -> [[Int]] -> [Int]
 getSquare i board = concat [take 3 (drop start_col row) | row <- rows]
                      where start_row = i `mod` 3 * 3
@@ -35,7 +32,7 @@ boardSquares :: [[Int]] -> [[Int]]
 boardSquares board = [getSquare square_i board | square_i <- [0..8]]
 
 boardSets :: [[Int]] -> [[Int]]
-boardSets board = board ++ (boardCols board) ++ (boardSquares board)
+boardSets board = board ++ (transpose board) ++ (boardSquares board)
 
 boardValid :: [[Int]] -> Bool
 boardValid board = all setValid (boardSets board)
@@ -45,20 +42,6 @@ replaceIndex (row, col) board val = first ++ nrow : (tail last)
                                        where (first, last) = splitAt row board
                                              nrow = rowFst ++ val : (tail rowLst)
                                                 where (rowFst, rowLst) = splitAt col (head last)
-
-solveIndex :: (Int, Int) -> [[Int]] -> Maybe [[Int]]
-solveIndex rc board = go rc board [1..9]
-                                 where 
-                                    go :: (Int, Int) -> [[Int]] -> [Int] -> Maybe [[Int]]
-                                    go _ _ [] = Nothing
-                                    go rc board (v:vs) = 
-                                       if (boardValid new_board)
-                                          then let result = recursiveBacktracking new_board (findEmpty new_board)
-                                                in case result of
-                                                     Just res_board -> result
-                                                     Nothing -> go rc board vs
-                                          else go rc board vs
-                                       where new_board = replaceIndex rc board v
 
 enumerate :: [a] -> [(Int, a)]
 enumerate ls = go ls 0
@@ -74,10 +57,21 @@ findEmpty board = concat $ map (emptyIndices) (enumerate board)
 
 recursiveBacktracking :: [[Int]] -> [(Int, Int)] -> Maybe [[Int]]
 recursiveBacktracking board [] = if boardComplete board then Just board else Nothing
-recursiveBacktracking board empty@(i:xi) = let new_board = solveIndex i board
+recursiveBacktracking board empty@(i:xi) = let new_board = go i board [1..9]
                                              in case new_board of
                                                   Just nb -> recursiveBacktracking nb xi
                                                   Nothing -> Nothing
+                                             where 
+                                                go :: (Int, Int) -> [[Int]] -> [Int] -> Maybe [[Int]]
+                                                go _ _ [] = Nothing
+                                                go rc board (v:vs) = 
+                                                   if (boardValid new_board)
+                                                      then let result = solveBoard new_board
+                                                            in case result of
+                                                                 Just res_board -> Just res_board
+                                                                 Nothing -> go rc board vs
+                                                      else go rc board vs
+                                                   where new_board = replaceIndex rc board v
 
 solveBoard :: [[Int]] -> Maybe [[Int]]
 solveBoard board = recursiveBacktracking board (findEmpty board)
